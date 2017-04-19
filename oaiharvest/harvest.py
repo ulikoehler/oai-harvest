@@ -104,6 +104,63 @@ class OAIHarvester(object):
             "{0.__class__.__name__} must be sub-classed".format(self)
         )
 
+class YakDBOAIHarvester(OAIHarvester):
+    """OAI-PMH Harvester to output harvested records to files in a directory.
+
+    Directory to output files to is specified at object init/construction
+    time.
+    """
+
+    def __init__(self, mdRegistry, directory,
+                 respectDeletions=True, createSubDirs=False, nRecs=0):
+        OAIHarvester.__init__(self, mdRegistry)
+        import YakDB
+        self.conn = YakDB.Connection()
+        self.conn.usePushMode()
+        self.conn.connect("tcp://localhost:7101")
+        self.conn.put(1, {"a":"b","c":"d"})
+
+
+    def harvest(self, baseUrl, metadataPrefix, **kwargs):
+        """Harvest records, return if completed.
+
+        Harvest records, output records to files in the directory and
+        return a boolean for whether or not all of the records that the
+        server could return were actually stored locally.
+        """
+        logger = logging.getLogger(__name__).getChild(self.__class__.__name__)
+        # A counter for the number of records actually returned
+        # enumerate() not used as it would include deleted records
+        i = 0
+        for header, metadata, about in self._listRecords(
+                 baseUrl,
+                 metadataPrefix=metadataPrefix,
+                 **kwargs):
+            if self.nRecs and self.nRecs > 0 and self.nRecs <= i:
+                logger.info("Stopping harvest; set limit of {0} has been "
+                            "reached".format(self.nRecs))
+                break
+
+            key = "{0}.{1}".format(header.identifier(), metadataPrefix)
+
+            if not header.isDeleted():
+                logger.debug('Writing to database {0}'.format(key))
+                self.conn.put(1, metadata)
+                i += 1
+            else:
+                if self.respectDeletions:
+                    logger.debug("Respecting server request to delete file "
+                                 "{0}".format(fp))
+                    self.conn.delete(1, key)
+                else:
+                    logger.debug("Ignoring server request to delete file "
+                                 "{0}".format(fp))
+        else:
+            # Harvesting completed, all available records stored
+            return True
+        # Loop must have been stopped with ``break``, e.g. due to
+        # arbitrary limit
+        return False
 
 class DirectoryOAIHarvester(OAIHarvester):
     """OAI-PMH Harvester to output harvested records to files in a directory.
@@ -267,7 +324,7 @@ def main(argv=None):
             args.metadataPrefix = 'oai_dc'
 
         # Init harvester object
-        harvester = DirectoryOAIHarvester(metadata_registry,
+        harvester = YakDBOAIHarvester(metadata_registry,
                                           os.path.abspath(args.dir),
                                           respectDeletions=args.deletions,
                                           createSubDirs=args.subdirs,
