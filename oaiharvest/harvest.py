@@ -104,6 +104,14 @@ class OAIHarvester(object):
             "{0.__class__.__name__} must be sub-classed".format(self)
         )
 
+from bs4 import BeautifulSoup
+from collections import defaultdict
+from toolz.dicttoolz import valmap
+try:
+    import simplejson as json
+except:
+    import json
+
 class YakDBOAIHarvester(OAIHarvester):
     """OAI-PMH Harvester to output harvested records to files in a directory.
 
@@ -145,9 +153,24 @@ class YakDBOAIHarvester(OAIHarvester):
 
             key = "{0}.{1}".format(header.identifier(), metadataPrefix)
 
+            # Parse metadata (assume oai_dc)
+            print(metadata)
+            print(type(metadata))
+            soup = BeautifulSoup(metadata, "lxml-xml")
+            dc = defaultdict(list)
+            print(soup)
+            for child in list(soup.children)[0].children:
+                # Skip strings
+                if not hasattr(child, "text"):
+                    continue
+                dc[child.name].append(child.text)
+
+            # Replace single-element lists by strings
+            dc = valmap(lambda v: v if len(v) > 1 else v[0], dc)
+
             if not header.isDeleted():
                 logger.debug('Writing to database {0}'.format(key))
-                self.conn.put(1, metadata)
+                self.conn.put(1, {key: json.dump(dc)})
                 i += 1
             else:
                 if self.respectDeletions:
@@ -326,7 +349,7 @@ def main(argv=None):
             args.metadataPrefix = 'oai_dc'
 
         # Init harvester object
-        harvester = YakDBOAIHarvester(metadata_registry,
+        harvester = DirectoryOAIHarvester(metadata_registry,
                                           os.path.abspath(args.dir),
                                           respectDeletions=args.deletions,
                                           createSubDirs=args.subdirs,
