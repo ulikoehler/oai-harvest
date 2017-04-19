@@ -118,7 +118,9 @@ class YakDBOAIHarvester(OAIHarvester):
         self.conn = YakDB.Connection()
         self.conn.usePushMode()
         self.conn.connect("tcp://localhost:7101")
-        self.conn.put(1, {"a":"b","c":"d"})
+        self.respectDeletions = respectDeletions
+        self.createSubDirs = createSubDirs
+        self.nRecs = nRecs
 
 
     def harvest(self, baseUrl, metadataPrefix, **kwargs):
