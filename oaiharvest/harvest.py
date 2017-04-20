@@ -154,11 +154,8 @@ class YakDBOAIHarvester(OAIHarvester):
             key = "{0}.{1}".format(header.identifier(), metadataPrefix)
 
             # Parse metadata (assume oai_dc)
-            print(metadata)
-            print(type(metadata))
             soup = BeautifulSoup(metadata, "lxml-xml")
             dc = defaultdict(list)
-            print(soup)
             for child in list(soup.children)[0].children:
                 # Skip strings
                 if not hasattr(child, "text"):
@@ -170,7 +167,7 @@ class YakDBOAIHarvester(OAIHarvester):
 
             if not header.isDeleted():
                 logger.debug('Writing to database {0}'.format(key))
-                self.conn.put(1, {key: json.dump(dc)})
+                self.conn.put(1, {key: json.dumps(dc)})
                 i += 1
             else:
                 if self.respectDeletions:
@@ -349,7 +346,7 @@ def main(argv=None):
             args.metadataPrefix = 'oai_dc'
 
         # Init harvester object
-        harvester = DirectoryOAIHarvester(metadata_registry,
+        harvester = YakDBOAIHarvester(metadata_registry,
                                           os.path.abspath(args.dir),
                                           respectDeletions=args.deletions,
                                           createSubDirs=args.subdirs,
