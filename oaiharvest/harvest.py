@@ -151,6 +151,9 @@ class YakDBOAIHarvester(OAIHarvester):
                             "reached".format(self.nRecs))
                 break
 
+            if not isinstance(metadata, str):
+                continue
+
             key = "{0}.{1}".format(header.identifier(), metadataPrefix)
 
             # Parse metadata (assume oai_dc)
