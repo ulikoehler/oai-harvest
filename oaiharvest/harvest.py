@@ -124,7 +124,7 @@ class YakDBOAIHarvester(OAIHarvester):
         OAIHarvester.__init__(self, mdRegistry)
         import YakDB
         self.conn = YakDB.Connection()
-        self.batch = YakDB.AutoWriteBatch(self.conn, 5)
+        self.batch = YakDB.Batch.AutoWriteBatch(self.conn, 5)
         self.conn.usePushMode()
         self.conn.connect("tcp://localhost:7101")
         self.respectDeletions = respectDeletions
