@@ -124,6 +124,7 @@ class YakDBOAIHarvester(OAIHarvester):
         OAIHarvester.__init__(self, mdRegistry)
         import YakDB
         self.conn = YakDB.Connection()
+        self.batch = YakDB.AutoWriteBatch(self.conn, 5)
         self.conn.usePushMode()
         self.conn.connect("tcp://localhost:7101")
         self.respectDeletions = respectDeletions
@@ -170,7 +171,7 @@ class YakDBOAIHarvester(OAIHarvester):
 
             if not header.isDeleted():
                 logger.debug('Writing to database {0}'.format(key))
-                self.conn.put(1, {key: json.dumps(dc)})
+                self.batch.putSingle(key, json.dumps(dc))
                 i += 1
             else:
                 if self.respectDeletions:
