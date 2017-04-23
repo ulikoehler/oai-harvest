@@ -220,3 +220,6 @@ env/
 /site
 
 # End of https://www.gitignore.io/api/pydev,python,pycharm,eclipse
+
+# DBM branch specifics
+oaiharvest.dbm

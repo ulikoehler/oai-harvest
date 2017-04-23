@@ -112,7 +112,7 @@ try:
 except:
     import json
 
-class YakDBOAIHarvester(OAIHarvester):
+class GDBMOAIHarvester(OAIHarvester):
     """OAI-PMH Harvester to output harvested records to files in a directory.
 
     Directory to output files to is specified at object init/construction
@@ -122,12 +122,9 @@ class YakDBOAIHarvester(OAIHarvester):
     def __init__(self, mdRegistry, directory,
                  respectDeletions=True, createSubDirs=False, nRecs=0):
         OAIHarvester.__init__(self, mdRegistry)
-        import YakDB
-        from YakDB.Batch import AutoWriteBatch
-        self.conn = YakDB.Connection()
-        self.batch = AutoWriteBatch(self.conn, 5)
-        self.conn.usePushMode()
-        self.conn.connect("tcp://localhost:7101")
+        import dbm.gnu
+        self.db = dbm.gnu.open("oaiharvest.dbm", "cf")
+
         self.respectDeletions = respectDeletions
         self.createSubDirs = createSubDirs
         self.nRecs = nRecs
@@ -172,7 +169,7 @@ class YakDBOAIHarvester(OAIHarvester):
 
             if not header.isDeleted():
                 logger.debug('Writing to database {0}'.format(key))
-                self.batch.putSingle(key, json.dumps(dc))
+                self.db[key] = json.dumps(dc)
                 i += 1
             else:
                 if self.respectDeletions:
@@ -351,7 +348,7 @@ def main(argv=None):
             args.metadataPrefix = 'oai_dc'
 
         # Init harvester object
-        harvester = YakDBOAIHarvester(metadata_registry,
+        harvester = GDBMOAIHarvester(metadata_registry,
                                           os.path.abspath(args.dir),
                                           respectDeletions=args.deletions,
                                           createSubDirs=args.subdirs,
